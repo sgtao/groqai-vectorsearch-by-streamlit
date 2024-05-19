@@ -14,5 +14,5 @@ st.sidebar.title("Navigation")
 st.sidebar.success("Select a page above.")
 
 # メインページのコンテンツ
-st.title("Welcome to the LLM-RAG App")
+st.title("🚀 Welcome to the LLM-RAG App")
 st.write("This app demonstrates a multi-page Streamlit application with ETL and Chatbot functionalities.")
