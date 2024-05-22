@@ -3,8 +3,6 @@ import os
 import streamlit as st
 
 
-st.set_page_config(page_title="Echo Chatbot", page_icon="💬")
-
 # チャット履歴の初期化
 if "chat_history" not in st.session_state:
     st.session_state.chat_history = []
