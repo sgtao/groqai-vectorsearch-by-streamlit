@@ -6,9 +6,13 @@ from groq import Groq
 st.set_page_config(page_title="Groq API Chatbot", page_icon="💬")
 
 with st.sidebar:
-    groq_api_key = st.text_input("Groq API Key", key="file_qa_api_key", type="password", placeholder="gsk_...")
+    groq_api_key = st.text_input("Groq API Key", key="api_key", type="password", placeholder="gsk_...")
     "[Get an Groq API key](https://console.groq.com/keys)"
     "[View the source code](https://github.com/sgtao/groqai-vectorsearch-by-streamlit/blob/main/pages/02_chatbot_page.py)"
+
+    if st.button("Clear Chat Message"):
+        st.session_state.groq_chat_history = []
+
 
 st.title("💬 Chatbot")
 st.write("This page hosts a chatbot interface.")
