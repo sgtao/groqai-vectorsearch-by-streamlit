@@ -38,6 +38,8 @@ if question := st.chat_input("Ask something"):
 
     # promptの作成
     user_prompt = question
+    # completionのメッセージを履歴に追加
+    st.session_state.groq_chat_history.append({"role": "user", "content": user_prompt})
 
     # completionの作成
     if groq_api_key:
@@ -45,12 +47,7 @@ if question := st.chat_input("Ask something"):
             api_key=groq_api_key,
         )
         chat_completion = client.chat.completions.create(
-            messages=[
-                {
-                    "role": "user",
-                    "content": user_prompt,
-                }
-            ],
+            messages=st.session_state.groq_chat_history,
             model="llama3-8b-8192",
         )
         # print(chat_completion.choices[0].message.content)
@@ -74,5 +71,4 @@ if question := st.chat_input("Ask something"):
     )
 
     # prompt, completionのメッセージを履歴に追加
-    st.session_state.groq_chat_history.append({"role": "user", "content": question})
     st.session_state.groq_chat_history.append({"role": "assistant", "content": completion})
