@@ -10,26 +10,28 @@ with st.sidebar:
     "[Get an Groq API key](https://console.groq.com/keys)"
     "[View the source code](https://github.com/sgtao/groqai-vectorsearch-by-streamlit/blob/main/pages/02_chatbot_page.py)"
 
-
 st.title("💬 Chatbot")
 st.write("This page hosts a chatbot interface.")
 
 # チャットボットのサンプルコード
 with st.chat_message("assistant"):
     st.write("Hello!! Say something from input")
-# チャット履歴の初期化
-if "chat_history" not in st.session_state:
-    st.session_state.chat_history = []
+# チャット履歴の初期化／表示
+def show_chat_history():
+    if "groq_chat_history" not in st.session_state:
+        st.session_state.groq_chat_history = []
+    else:
+        for message in st.session_state.groq_chat_history:
+            with st.chat_message(message["role"]):
+                st.markdown(message["content"])
+
 
 if not groq_api_key:
     st.info("Please add your API key to continue.")
+else:
+    show_chat_history()
 
 if question := st.chat_input("Ask something"):
-    # チャット履歴の表示
-    for message in st.session_state.chat_history:
-        with st.chat_message(message["role"]):
-            st.markdown(message["content"])
-
     # ユーザーのメッセージを表示
     with st.chat_message("user"):
         st.markdown(question)
@@ -56,7 +58,7 @@ if question := st.chat_input("Ask something"):
     else:
         completion = user_prompt
 
-    # エコーメッセージを表示
+    # コンプリーションメッセージを表示
     with st.chat_message("assistant"):
         st.markdown(completion)
 
@@ -72,5 +74,5 @@ if question := st.chat_input("Ask something"):
     )
 
     # prompt, completionのメッセージを履歴に追加
-    st.session_state.chat_history.append({"role": "user", "content": question})
-    st.session_state.chat_history.append({"role": "assistant", "content": completion})
+    st.session_state.groq_chat_history.append({"role": "user", "content": question})
+    st.session_state.groq_chat_history.append({"role": "assistant", "content": completion})
