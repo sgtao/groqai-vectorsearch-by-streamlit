@@ -17,31 +17,44 @@ with st.sidebar:
 st.title("💬 Chatbot")
 st.write("This page hosts a chatbot interface.")
 
-# チャットボットのサンプルコード
-with st.chat_message("assistant"):
-    st.write("Hello!! Say something from input")
-# チャット履歴の初期化／表示
-def show_chat_history():
-    if "groq_chat_history" not in st.session_state:
-        st.session_state.groq_chat_history = []
-    else:
-        for message in st.session_state.groq_chat_history:
-            with st.chat_message(message["role"]):
-                st.markdown(message["content"])
-
-
 if not groq_api_key:
     st.info("Please add your API key to continue.")
 else:
-    show_chat_history()
+    # チャット履歴の初期化
+    if "groq_chat_history" not in st.session_state:
+        st.session_state.groq_chat_history = []
+    # ファイルアップロード
+    st.write("before 1st question, You can attach an articles.")
+    uploaded_file = st.file_uploader(
+        "Upload an article",
+        type=("txt", "md"),
+        disabled=(not st.session_state.groq_chat_history and st.session_state.groq_chat_history != []),
+    )
+    # チャットボットのサンプルコード
+    with st.chat_message("assistant"):
+        st.write("Hello!! Say something from input")
+    # チャット履歴の表示
+    for message in st.session_state.groq_chat_history:
+        with st.chat_message(message["role"]):
+            st.markdown(message["content"])
 
-if question := st.chat_input("Ask something"):
+if question := st.chat_input("Ask something", disabled=not groq_api_key):
     # ユーザーのメッセージを表示
     with st.chat_message("user"):
         st.markdown(question)
 
     # promptの作成
-    user_prompt = question
+    # - 最初のチャットのときに添付ファイルがある場合は、upload_fileをuser_prompt二添付
+    user_prompt = ""
+    # print(type(uploaded_file)) # At no attachment, <class 'NoneType'>
+    if st.session_state.groq_chat_history == [] and uploaded_file is not None:
+        article = uploaded_file.read().decode()
+        # print(f"attachmented article:{article}")
+        user_prompt = f"""Human: Here's an article:\n\n<article>
+        {article}\n\n</article>\n\n{question}\n\nAssistant:"""
+    else:
+        user_prompt = question
+
     # completionのメッセージを履歴に追加
     st.session_state.groq_chat_history.append({"role": "user", "content": user_prompt})
 
