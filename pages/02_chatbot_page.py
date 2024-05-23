@@ -13,13 +13,23 @@ with st.sidebar:
     "[Get an Groq API key](https://console.groq.com/keys)"
     "[View the source code](https://github.com/sgtao/groqai-vectorsearch-by-streamlit/blob/main/pages/02_chatbot_page.py)"
 
-    if st.button("Clear Chat Message"):
-        st.session_state.groq_chat_history = []
+    # SYSTEM_PROMPTの編集
+    system_prompt = st.text_area(
+        "Edit SYSTEM_PROMPT before chat",
+        value="You are a helpful assistant.",
+        height=100,
+        disabled=("groq_chat_history" in st.session_state),
+    )
+
+    # SYSTEM_PROMPTをセッションステートに保存
+    if "system_prompt" not in st.session_state:
+        st.session_state.system_prompt = system_prompt
+    else:
+        st.session_state.system_prompt = system_prompt
 
     # チャット履歴をダウンロードするボタン
     if st.button(
-      "Download Chat History ?",
-      disabled=not "groq_chat_history" in st.session_state
+        "Download Chat History ?", disabled=not "groq_chat_history" in st.session_state
     ):
         chat_history_json = json.dumps(
             st.session_state.groq_chat_history, ensure_ascii=False, indent=4
@@ -30,6 +40,9 @@ with st.sidebar:
             file_name="chat_history.json",
             mime="application/json",
         )
+
+    if st.button("Clear Chat Message"):
+        st.session_state.groq_chat_history = []
 
 
 st.title("💬 Groq-API Chatbot")
@@ -52,8 +65,9 @@ else:
         st.write("Hello!! Say something from input")
     # チャット履歴の表示
     for message in st.session_state.groq_chat_history:
-        with st.chat_message(message["role"]):
-            st.markdown(message["content"])
+        if message["role"] != "system":  # SYSTEM_PROMPTは表示しない
+            with st.chat_message(message["role"]):
+                st.markdown(message["content"])
 
 if question := st.chat_input("Ask something", disabled=not groq_api_key):
     # ユーザーのメッセージを表示
@@ -74,6 +88,9 @@ if question := st.chat_input("Ask something", disabled=not groq_api_key):
 
     # completionのメッセージを履歴に追加
     st.session_state.groq_chat_history.append({"role": "user", "content": user_prompt})
+    # SYSTEM_PROMPTとチャット履歴を連結
+    system_prompt_item = [{"role": "system", "content": st.session_state.system_prompt}]
+    full_chat_history = system_prompt_item + st.session_state.groq_chat_history
 
     # completionの作成
     if groq_api_key:
