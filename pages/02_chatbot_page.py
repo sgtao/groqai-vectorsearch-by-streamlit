@@ -1,17 +1,34 @@
 # chatbot_page.py
 import os
+import json
 import streamlit as st
 from groq import Groq
 
 st.set_page_config(page_title="Groq API Chatbot", page_icon="💬")
 
 with st.sidebar:
-    groq_api_key = st.text_input("Groq API Key", key="api_key", type="password", placeholder="gsk_...")
+    groq_api_key = st.text_input(
+        "Groq API Key", key="api_key", type="password", placeholder="gsk_..."
+    )
     "[Get an Groq API key](https://console.groq.com/keys)"
     "[View the source code](https://github.com/sgtao/groqai-vectorsearch-by-streamlit/blob/main/pages/02_chatbot_page.py)"
 
     if st.button("Clear Chat Message"):
         st.session_state.groq_chat_history = []
+
+    # チャット履歴をダウンロードするボタン
+    if (
+      "groq_chat_history" in st.session_state
+    ):
+        chat_history_json = json.dumps(
+            st.session_state.groq_chat_history, ensure_ascii=False, indent=4
+        )
+        st.download_button(
+            label="Download chat_history.json",
+            data=chat_history_json,
+            file_name="chat_history.json",
+            mime="application/json",
+        )
 
 
 st.title("💬 Chatbot")
@@ -28,7 +45,9 @@ else:
     uploaded_file = st.file_uploader(
         "Upload an article",
         type=("txt", "md"),
-        disabled=(not st.session_state.groq_chat_history and st.session_state.groq_chat_history != []),
+        disabled=(
+            st.session_state.groq_chat_history != []
+        ),
     )
     # チャットボットのサンプルコード
     with st.chat_message("assistant"):
@@ -88,4 +107,6 @@ if question := st.chat_input("Ask something", disabled=not groq_api_key):
     )
 
     # prompt, completionのメッセージを履歴に追加
-    st.session_state.groq_chat_history.append({"role": "assistant", "content": completion})
+    st.session_state.groq_chat_history.append(
+        {"role": "assistant", "content": completion}
+    )

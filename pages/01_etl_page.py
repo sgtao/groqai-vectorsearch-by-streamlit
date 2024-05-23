@@ -1,5 +1,4 @@
 # etl_page.py
-import os
 import streamlit as st
 import PyPDF2
 from groq import Groq
@@ -14,13 +13,6 @@ st.set_page_config(page_title="ETL Page", page_icon="🔄")
 
 st.title("🔄ETL Processing")
 st.write("This page is dedicated to ETL (Extract, Transform, Load) operations.")
-
-# Groqクライアントの初期化
-api_key = os.getenv("GROQ_API_KEY")
-if not api_key:
-    st.error("APIキーが設定されていません。")
-    st.stop()
-
 
 
 # PDFファイルのアップロード
