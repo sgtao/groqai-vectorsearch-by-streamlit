@@ -17,8 +17,9 @@ with st.sidebar:
         st.session_state.groq_chat_history = []
 
     # チャット履歴をダウンロードするボタン
-    if (
-      "groq_chat_history" in st.session_state
+    if st.button(
+      "Download Chat History ?",
+      disabled=not "groq_chat_history" in st.session_state
     ):
         chat_history_json = json.dumps(
             st.session_state.groq_chat_history, ensure_ascii=False, indent=4
@@ -31,7 +32,7 @@ with st.sidebar:
         )
 
 
-st.title("💬 Chatbot")
+st.title("💬 Groq-API Chatbot")
 st.write("This page hosts a chatbot interface.")
 
 if not groq_api_key:
@@ -41,13 +42,10 @@ else:
     if "groq_chat_history" not in st.session_state:
         st.session_state.groq_chat_history = []
     # ファイルアップロード
-    st.write("before 1st question, You can attach an articles.")
     uploaded_file = st.file_uploader(
-        "Upload an article",
+        "Before 1st question, You can upload an article",
         type=("txt", "md"),
-        disabled=(
-            st.session_state.groq_chat_history != []
-        ),
+        disabled=(st.session_state.groq_chat_history != []),
     )
     # チャットボットのサンプルコード
     with st.chat_message("assistant"):
