@@ -39,6 +39,8 @@ with st.sidebar:
             # disabled=(not st.session_state.no_chat_history),
             disabled=(not "groq_chat_history" in st.session_state),
         )
+    else:
+        st.session_state.use_system_prompt = False
 
     # チャット履歴をダウンロードするボタン
     if st.checkbox(
@@ -91,6 +93,12 @@ if question := st.chat_input("Ask something", disabled=not groq_api_key):
     if st.session_state.groq_chat_history == []:
         # 最初のチャットの場合：
         # SYSTEM_PROMPTをメッセージに連結
+
+        """
+        use_system_prompt:
+        st.session_state.use_system_prompt
+        """
+        print(st.session_state.use_system_prompt)
         if st.session_state.use_system_prompt:
             system_prompt_item = [
                 {
