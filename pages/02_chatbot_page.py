@@ -93,7 +93,7 @@ else:
     uploaded_file = st.file_uploader(
         "Before 1st question, You can upload an article",
         type=("txt", "md"),
-        disabled=(not st.session_state.no_chat_history),
+        disabled=(st.session_state.groq_chat_history != []),
     )
     # チャットボットの最初の表示メッセージ
     with st.chat_message("assistant"):
