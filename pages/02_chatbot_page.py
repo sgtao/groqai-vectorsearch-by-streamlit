@@ -5,8 +5,20 @@ import streamlit as st
 from groq import Groq
 
 st.set_page_config(page_title="Groq API Chatbot", page_icon="💬")
-st.session_state.system_prompt = \
-    "Please transrate your responce in Japanese. And answer only Janapse responce."
+st.session_state.system_prompt = (
+    "You are a helpful assistant. And response in only Japanese."
+)
+
+st.session_state.no_chat_history = True
+
+
+def update_no_chat_history():
+    if not "groq_chat_history" in st.session_state:
+        st.session_state.no_chat_history = True
+    if st.session_state.groq_chat_history == []:
+        st.session_state.no_chat_history = True
+    st.session_state.no_chat_history = False
+
 
 with st.sidebar:
     groq_api_key = st.text_input(
@@ -16,18 +28,23 @@ with st.sidebar:
     "[View the source code](https://github.com/sgtao/groqai-vectorsearch-by-streamlit/blob/main/pages/02_chatbot_page.py)"
 
     # SYSTEM_PROMPTの編集
-    if st.checkbox('use SYSTEM PROMPT'):
+    if st.checkbox(
+        "use SYSTEM PROMPT", disabled=(not st.session_state.no_chat_history)
+    ):
         st.session_state.use_system_prompt = True
         st.session_state.system_prompt = st.text_area(
             "Edit SYSTEM_PROMPT before chat",
             value=st.session_state.system_prompt,
             height=100,
-            # disabled=(not "groq_chat_history" in st.session_state),
+            # disabled=(not st.session_state.no_chat_history),
+            disabled=(not "groq_chat_history" in st.session_state),
         )
 
     # チャット履歴をダウンロードするボタン
-    if st.button(
-        "Download Chat History ?", disabled=not "groq_chat_history" in st.session_state
+    if st.checkbox(
+        "Download Chat History ?",
+        # disabled=(not st.session_state.no_chat_history),
+        disabled=(not "groq_chat_history" in st.session_state),
     ):
         chat_history_json = json.dumps(
             st.session_state.groq_chat_history, ensure_ascii=False, indent=4
@@ -41,7 +58,7 @@ with st.sidebar:
 
     if st.button("Clear Chat Message"):
         st.session_state.groq_chat_history = []
-
+        update_no_chat_history()
 
 st.title("💬 Groq-API Chatbot")
 st.write("This page hosts a chatbot interface.")
@@ -56,9 +73,9 @@ else:
     uploaded_file = st.file_uploader(
         "Before 1st question, You can upload an article",
         type=("txt", "md"),
-        disabled=(st.session_state.groq_chat_history != []),
+        disabled=(not st.session_state.no_chat_history),
     )
-    # チャットボットのサンプルコード
+    # チャットボットの最初の表示メッセージ
     with st.chat_message("assistant"):
         st.write("Hello!! Say something from input")
     # チャット履歴の表示
@@ -68,34 +85,42 @@ else:
                 st.markdown(message["content"])
 
 if question := st.chat_input("Ask something", disabled=not groq_api_key):
-    # ユーザーのメッセージを表示
-    with st.chat_message("user"):
-        st.markdown(question)
 
     # promptの作成
-    # - 最初のチャットのときに添付ファイルがある場合は、upload_fileをuser_prompt二添付
     user_prompt = ""
-    # print(type(uploaded_file)) # At no attachment, <class 'NoneType'>
-    if st.session_state.groq_chat_history == [] and uploaded_file is not None:
-        article = uploaded_file.read().decode()
-        # print(f"attachmented article:{article}")
-        user_prompt = f"""Human: Here's an article:\n\n<article>
-        {article}\n\n</article>\n\n{question}\n\nAssistant:"""
+    if st.session_state.groq_chat_history == []:
+        # 最初のチャットの場合：
+        # SYSTEM_PROMPTをメッセージに連結
+        if st.session_state.use_system_prompt:
+            system_prompt_item = [
+                {
+                    "role": "system",
+                    "content": st.session_state.system_prompt,
+                    "name": "userSupplement",
+                }
+            ]
+            st.session_state.groq_chat_history = system_prompt_item
+
+        # 最初のチャットで添付ファイルがある場合、upload_fileをuser_promptに添付
+        # print(type(uploaded_file)) # At no attachment, <class 'NoneType'>
+        if uploaded_file is not None:
+            article = uploaded_file.read().decode()
+            # print(f"attachmented article:{article}")
+            user_prompt = f"""Human: Here's an article(添付ファイル):\n\n<article>
+            {article}\n\n</article>\n\n{question}\n\nAssistant:"""
+        else:
+            user_prompt = question
+
     else:
+        # 継続チャットの場合：
         user_prompt = question
 
     # completionのメッセージを履歴に追加
     st.session_state.groq_chat_history.append({"role": "user", "content": user_prompt})
-    # SYSTEM_PROMPTとチャット履歴を連結
-    system_prompt_item = [{
-        "role": "system",
-        "content": st.session_state.system_prompt,
-        "name": "userSupplement"
-    }]
-    if st.session_state.use_system_prompt:
-        full_chat_history = system_prompt_item + st.session_state.groq_chat_history
-    else:
-        full_chat_history = st.session_state.groq_chat_history
+
+    # ユーザーのメッセージを表示
+    with st.chat_message("user"):
+        st.markdown(user_prompt)
 
     # completionの作成
     if groq_api_key:
@@ -103,14 +128,21 @@ if question := st.chat_input("Ask something", disabled=not groq_api_key):
             api_key=groq_api_key,
         )
         chat_completion = client.chat.completions.create(
-            # messages=st.session_state.groq_chat_history,
-            messages=full_chat_history,
+            messages=st.session_state.groq_chat_history,
             model="llama3-8b-8192",
         )
         # print(chat_completion.choices[0].message.content)
         completion = chat_completion.choices[0].message.content
     else:
         completion = user_prompt
+
+    # prompt, completionのメッセージを履歴に追加
+    st.session_state.groq_chat_history.append(
+        {"role": "assistant", "content": completion}
+    )
+
+    # 画面表示の更新
+    update_no_chat_history()
 
     # コンプリーションメッセージを表示
     with st.chat_message("assistant"):
@@ -125,9 +157,4 @@ if question := st.chat_input("Ask something", disabled=not groq_api_key):
         </script>
         """,
         unsafe_allow_html=True,
-    )
-
-    # prompt, completionのメッセージを履歴に追加
-    st.session_state.groq_chat_history.append(
-        {"role": "assistant", "content": completion}
     )
