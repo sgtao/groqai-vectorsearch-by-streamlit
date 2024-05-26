@@ -42,6 +42,16 @@ with st.sidebar:
     else:
         st.session_state.use_system_prompt = False
 
+    # Completion Parameterの調整
+    if st.checkbox("change Completion Prams."):
+        max_tokens = st.slider("max_tokens", 1024, 8192, 2048, 1)
+        temperature = st.slider("temperature", 0.0, 1.0, 0.0, 0.1)
+        top_p = st.slider("top_p", 0.0, 1.0, 1.0, 0.1)
+    else:
+        max_tokens = 2048
+        temperature = 0.0
+        top_p = 0.0
+
     # チャット履歴をダウンロードするボタン
     if st.checkbox(
         "Download Chat History ?",
@@ -93,12 +103,6 @@ if question := st.chat_input("Ask something", disabled=not groq_api_key):
     if st.session_state.groq_chat_history == []:
         # 最初のチャットの場合：
         # SYSTEM_PROMPTをメッセージに連結
-
-        """
-        use_system_prompt:
-        st.session_state.use_system_prompt
-        """
-        print(st.session_state.use_system_prompt)
         if st.session_state.use_system_prompt:
             system_prompt_item = [
                 {
@@ -138,6 +142,9 @@ if question := st.chat_input("Ask something", disabled=not groq_api_key):
         chat_completion = client.chat.completions.create(
             messages=st.session_state.groq_chat_history,
             model="llama3-8b-8192",
+            max_tokens=max_tokens,
+            temperature=temperature,
+            top_p=top_p
         )
         # print(chat_completion.choices[0].message.content)
         completion = chat_completion.choices[0].message.content
