@@ -8,16 +8,9 @@ st.set_page_config(page_title="Groq API Chatbot", page_icon="💬")
 st.session_state.system_prompt = (
     "You are a helpful assistant. And response in only Japanese."
 )
-
-st.session_state.no_chat_history = True
-
-
-def update_no_chat_history():
-    if not "groq_chat_history" in st.session_state:
-        st.session_state.no_chat_history = True
-    if st.session_state.groq_chat_history == []:
-        st.session_state.no_chat_history = True
-    st.session_state.no_chat_history = False
+# チャット履歴の初期化
+if "groq_chat_history" not in st.session_state:
+    st.session_state.groq_chat_history = []
 
 
 with st.sidebar:
@@ -29,7 +22,7 @@ with st.sidebar:
 
     # SYSTEM_PROMPTの編集
     if st.checkbox(
-        "use SYSTEM PROMPT", disabled=(not st.session_state.no_chat_history)
+        "use SYSTEM PROMPT", disabled=(st.session_state.groq_chat_history != [])
     ):
         st.session_state.use_system_prompt = True
         st.session_state.system_prompt = st.text_area(
@@ -37,7 +30,7 @@ with st.sidebar:
             value=st.session_state.system_prompt,
             height=100,
             # disabled=(not st.session_state.no_chat_history),
-            disabled=(not "groq_chat_history" in st.session_state),
+            disabled=(st.session_state.groq_chat_history != []),
         )
     else:
         st.session_state.use_system_prompt = False
@@ -64,7 +57,7 @@ with st.sidebar:
     if st.checkbox(
         "Download Chat History ?",
         # disabled=(not st.session_state.no_chat_history),
-        disabled=(not "groq_chat_history" in st.session_state),
+        disabled=("groq_chat_history" not in st.session_state),
     ):
         chat_history_json = json.dumps(
             st.session_state.groq_chat_history, ensure_ascii=False, indent=4
@@ -76,9 +69,8 @@ with st.sidebar:
             mime="application/json",
         )
 
-    if st.button("Clear Chat Message"):
+    if st.button("Clear Chat Message (click 2 times)"):
         st.session_state.groq_chat_history = []
-        update_no_chat_history()
 
 st.title("💬 Groq-API Chatbot")
 st.write("This page hosts a chatbot interface.")
@@ -86,9 +78,6 @@ st.write("This page hosts a chatbot interface.")
 if not groq_api_key:
     st.info("Please add your API key to continue.")
 else:
-    # チャット履歴の初期化
-    if "groq_chat_history" not in st.session_state:
-        st.session_state.groq_chat_history = []
     # ファイルアップロード
     uploaded_file = st.file_uploader(
         "Before 1st question, You can upload an article",
@@ -163,9 +152,6 @@ if question := st.chat_input("Ask something", disabled=not groq_api_key):
     st.session_state.groq_chat_history.append(
         {"role": "assistant", "content": completion}
     )
-
-    # 画面表示の更新
-    update_no_chat_history()
 
     # コンプリーションメッセージを表示
     with st.chat_message("assistant"):
