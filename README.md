@@ -10,7 +10,9 @@ poetry install
 
 ## Usage
 - 文章のベクトル化は別サーバで実施
-  - 別に`encoding-api-using-sentence-transformers`プロジェクトを起動する
+- 別途、[semantic-trans-search](https://github.com/sgtao/semantic-trans-search.git
+)プロジェクトを起動する
+- その後、`streamlit`でアプリを起動する
 ```sh
 poetry shell
 streamlit run main.py
