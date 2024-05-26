@@ -44,10 +44,18 @@ with st.sidebar:
 
     # Completion Parameterの調整
     if st.checkbox("change Completion Prams."):
+        # モデル選択
+        llm_model = st.selectbox(
+            "Select Model",
+            ["llama3-8b-8192", "llama3-70b-8192", "mixtral-8x7b-32768"],
+            index=0
+        )
+        # Parameterの調整
         max_tokens = st.slider("max_tokens", 1024, 8192, 2048, 1)
         temperature = st.slider("temperature", 0.0, 1.0, 0.0, 0.1)
-        top_p = st.slider("top_p", 0.0, 1.0, 1.0, 0.1)
+        top_p = st.slider("top_p", 0.0, 1.0, 0.0, 0.1)
     else:
+        llm_model = "llama3-8b-8192"
         max_tokens = 2048
         temperature = 0.0
         top_p = 0.0
@@ -141,7 +149,7 @@ if question := st.chat_input("Ask something", disabled=not groq_api_key):
         )
         chat_completion = client.chat.completions.create(
             messages=st.session_state.groq_chat_history,
-            model="llama3-8b-8192",
+            model=llm_model,
             max_tokens=max_tokens,
             temperature=temperature,
             top_p=top_p
