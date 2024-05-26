@@ -5,6 +5,8 @@ import streamlit as st
 from groq import Groq
 
 st.set_page_config(page_title="Groq API Chatbot", page_icon="💬")
+st.session_state.system_prompt = \
+    "Please transrate your responce in Japanese. And answer only Janapse responce."
 
 with st.sidebar:
     groq_api_key = st.text_input(
@@ -14,18 +16,14 @@ with st.sidebar:
     "[View the source code](https://github.com/sgtao/groqai-vectorsearch-by-streamlit/blob/main/pages/02_chatbot_page.py)"
 
     # SYSTEM_PROMPTの編集
-    system_prompt = st.text_area(
-        "Edit SYSTEM_PROMPT before chat",
-        value="You are a helpful assistant.",
-        height=100,
-        disabled=("groq_chat_history" in st.session_state),
-    )
-
-    # SYSTEM_PROMPTをセッションステートに保存
-    if "system_prompt" not in st.session_state:
-        st.session_state.system_prompt = system_prompt
-    else:
-        st.session_state.system_prompt = system_prompt
+    if st.checkbox('use SYSTEM PROMPT'):
+        st.session_state.use_system_prompt = True
+        st.session_state.system_prompt = st.text_area(
+            "Edit SYSTEM_PROMPT before chat",
+            value=st.session_state.system_prompt,
+            height=100,
+            # disabled=(not "groq_chat_history" in st.session_state),
+        )
 
     # チャット履歴をダウンロードするボタン
     if st.button(
@@ -89,8 +87,15 @@ if question := st.chat_input("Ask something", disabled=not groq_api_key):
     # completionのメッセージを履歴に追加
     st.session_state.groq_chat_history.append({"role": "user", "content": user_prompt})
     # SYSTEM_PROMPTとチャット履歴を連結
-    system_prompt_item = [{"role": "system", "content": st.session_state.system_prompt}]
-    full_chat_history = system_prompt_item + st.session_state.groq_chat_history
+    system_prompt_item = [{
+        "role": "system",
+        "content": st.session_state.system_prompt,
+        "name": "userSupplement"
+    }]
+    if st.session_state.use_system_prompt:
+        full_chat_history = system_prompt_item + st.session_state.groq_chat_history
+    else:
+        full_chat_history = st.session_state.groq_chat_history
 
     # completionの作成
     if groq_api_key:
@@ -98,7 +103,8 @@ if question := st.chat_input("Ask something", disabled=not groq_api_key):
             api_key=groq_api_key,
         )
         chat_completion = client.chat.completions.create(
-            messages=st.session_state.groq_chat_history,
+            # messages=st.session_state.groq_chat_history,
+            messages=full_chat_history,
             model="llama3-8b-8192",
         )
         # print(chat_completion.choices[0].message.content)
