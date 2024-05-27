@@ -62,62 +62,115 @@ def extract_process(pdf_file):
         return True
 
 
+# def transform_process():
+#     # APIエンドポイント
+#     api_base_url = "http://localhost:5000"
+#     embedding_url = api_base_url + "/encoding"
+
+#     # ベクトル値の取得
+#     items_embeddings = torch.tensor([])
+#     for item in extract_items:
+#         st.write(f"{item}")
+#         # Groq APIを使用してベクトル情報に変換
+#         # vector = groq_client.encode(item['text'])
+#         # st.write(f"Vector representation:{vector}")
+#         # response = groq_client.embeddings.create(
+#         #     # model="nomic-embed-text-v1.5",
+#         #     model="ada-30b-4096",
+#         #     input=item['text']
+#         # )
+#         # st.write("Vector representation:")
+#         # st.write(response['data'])
+#         sentences = item["text"]
+#         response = requests.post(embedding_url, json={"sentences": sentences})
+#         if response.status_code == 200:
+#             embeddings = response.json().get("embeddings", [])
+#             st.write("Vector representation for page", item["pageNumber"])
+#             st.write(embeddings)
+#             # NumPy配列に変換してリストに追加
+#             embeddings_np = np.array(embeddings)
+#             embeddings_tensor = torch.tensor(embeddings_np).float()
+#             # Tensorに追加
+#             items_embeddings = torch.cat(
+#                 (items_embeddings, embeddings_tensor.unsqueeze(0)), dim=0
+#             )
+#         else:
+#             st.error("Failed to get embeddings from API")
+#             return False
+
+#     # FAISSインデックスの作成
+#     now = datetime.now()
+#     collection_name = now.strftime("%y%m%d-%H%M%S")  # %yで2桁の年、%Hで24h表記
+#     create_index_url = api_base_url + "/collections/" + collection_name
+#     st.session_state.collection_name = collection_name
+#     print(f"put URL is {create_index_url}")
+#     # put URL is http://localhost:5000/collections/240527-065556
+#     print(type(items_embeddings))
+#     # <class 'torch.Tensor'>
+#     if items_embeddings.size(0) > 0:
+#         # Tensorをリストに変換
+#         items_embeddings_list = items_embeddings.detach().cpu().numpy().tolist()
+#         request_body = {"embedding_reference": items_embeddings_list}
+#         # print(request_body)
+#         response = requests.put(create_index_url, json=request_body)
+#         print(f"response_state is {response.status_code}")
+#         if response.status_code == 201:
+#             print("FAISS index created successfully!")
+#         else:
+#             print("Failed to create FAISS index")
+#             return False
+
+#     return True
+
+
 def transform_process():
     # APIエンドポイント
     api_base_url = "http://localhost:5000"
-    embedding_url = api_base_url + "/encoding"
+    # embedding_url = api_base_url + "/encoding"
+
+    now = datetime.now()
+    collection_name = now.strftime("%y%m%d-%H%M%S")  # %yで2桁の年、%Hで24h表記
+    st.session_state.collection_name = collection_name
 
     # ベクトル値の取得
     items_embeddings = torch.tensor([])
+    texts = []
     for item in extract_items:
-        st.write(f"{item}")
-        # Groq APIを使用してベクトル情報に変換
-        # vector = groq_client.encode(item['text'])
-        # st.write(f"Vector representation:{vector}")
-        # response = groq_client.embeddings.create(
-        #     # model="nomic-embed-text-v1.5",
-        #     model="ada-30b-4096",
-        #     input=item['text']
-        # )
-        # st.write("Vector representation:")
-        # st.write(response['data'])
-        sentences = item["text"]
-        response = requests.post(embedding_url, json={"sentences": sentences})
-        if response.status_code == 200:
-            embeddings = response.json().get("embeddings", [])
-            st.write("Vector representation for page", item["pageNumber"])
-            st.write(embeddings)
-            # NumPy配列に変換してリストに追加
-            embeddings_np = np.array(embeddings)
-            embeddings_tensor = torch.tensor(embeddings_np).float()
-            # Tensorに追加
-            items_embeddings = torch.cat(
-                (items_embeddings, embeddings_tensor.unsqueeze(0)), dim=0
-            )
-        else:
-            st.error("Failed to get embeddings from API")
-            return False
+        # st.write(f"{item}")
+        sentence = item["text"]
+        st.write(sentence)
+        texts.append(sentence)
+        # response = requests.post(embedding_url, json={"sentences": sentences})
+        # if response.status_code == 200:
+        #     embeddings = response.json().get("embeddings", [])
+        #     st.write("Vector representation for page", item["pageNumber"])
+        #     st.write(embeddings)
+        #     # NumPy配列に変換してリストに追加
+        #     embeddings_np = np.array(embeddings)
+        #     embeddings_tensor = torch.tensor(embeddings_np).float()
+        #     # Tensorに追加
+        #     items_embeddings = torch.cat(
+        #         (items_embeddings, embeddings_tensor.unsqueeze(0)), dim=0
+        #     )
+        #     # textsにitemのtextを追加
+        #     texts.append(item["text"])
+        # else:
+        #     st.error("Failed to get embeddings from API")
+        #     return False
 
     # FAISSインデックスの作成
-    now = datetime.now()
-    collection_name = now.strftime("%y%m%d-%H%M%S")  # %yで2桁の年、%Hで24h表記
-    create_index_url = api_base_url + "/collections/" + collection_name
-    st.session_state.collection_name = collection_name
+    create_index_url = api_base_url + "/collections/" + st.session_state.collection_name
     print(f"put URL is {create_index_url}")
-    # put URL is http://localhost:5000/collections/240527-065556
-    print(type(items_embeddings))
-    # <class 'torch.Tensor'>
-    if items_embeddings.size(0) > 0:
-        # Tensorをリストに変換
-        items_embeddings_list = items_embeddings.detach().cpu().numpy().tolist()
-        request_body = {"embedding_reference": items_embeddings_list}
-        # print(request_body)
+    if len(texts) > 0:
+        request_body = {"texts": texts}
         response = requests.put(create_index_url, json=request_body)
         print(f"response_state is {response.status_code}")
         if response.status_code == 201:
             print("FAISS index created successfully!")
+            st.success("Transfer process completed.")
         else:
             print("Failed to create FAISS index")
+            st.error("Failed to create FAISS index")
             return False
 
     return True
@@ -135,12 +188,13 @@ def similarity_search(query_text):
     response = requests.post(similarity_url, json={"query": query_text})
     if response.status_code == 200:
         result = response.json()
-        closest_point_id = result["closest_point_id"]
-        st.write(f"Closest point ID: {closest_point_id}")
+        # closest_point_id = result["closest_point_id"]
+        # st.write(f"Closest point ID: {closest_point_id}")
         st.write(f"Distance: {result['distance']}")
-        result_item = st.session_state.extract_items[closest_point_id]
-        st.write(f"Page: {result_item['pageNumber']} at {result_item['title']}")
-        st.write(f"Text: {result_item['text']}")
+        closest_text = result["closest_text"]
+        # result_item = st.session_state.extract_items[closest_point_id]
+        # st.write(f"Page: {result_item['pageNumber']} at {result_item['title']}")
+        st.write(f"Text: {closest_text}")
     else:
         st.error("Failed to perform similarity search")
 
