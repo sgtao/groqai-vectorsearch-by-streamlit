@@ -8,15 +8,13 @@ import requests
 st.set_page_config(page_title="Groq API RAG Chatbot", page_icon="💬")
 st.session_state.system_prompt = (
     """You are a helpful assistant. And response in only Japanese.
-    You are an expert programmer and problem-solver, tasked to answer any question about Langchain.
-    Using the provided context, answer the user's question to the best of your ability using the resources provided.
-    Generate a comprehensive and informative answer (but no more than 80 words) for a given question based solely on the provided search results (URL and content).
+    Assistant is designed to be able to assist with a wide range of tasks, from answering simple questions to providing in-depth explanations and discussions on a wide range of topics. As a language model, Assistant is able to generate human-like text based on the input it receives, allowing it to engage in natural-sounding conversations and provide responses that are coherent and relevant to the topic at hand.
+    Assistant is constantly learning and improving, and its capabilities are constantly evolving. It is able to process and understand large amounts of text, and can use this knowledge to provide accurate and informative responses to a wide range of questions. Additionally, Assistant is able to generate its own text based on the input it receives, allowing it to engage in discussions and provide explanations and descriptions on a wide range of topics.
+    Overall, Assistant is a powerful system that can help with a wide range of tasks and provide valuable insights and information on a wide range of topics. Whether you need help with a specific question or just want to have a conversation about a particular topic, Assistant is here to assist.`;
     You must only use information from the provided search results.
     Use an unbiased and journalistic tone.
     Combine search results together into a coherent answer.
     Do not repeat text.
-    Cite search results using [${number}] notation.
-    Only cite the most relevant results that answer the question accurately.
     Place these citations at the end of the sentence or paragraph that reference them - do not put them all at the end.
     If different results refer to different entities within the same name, write separate answers for each entity.
     If there is nothing in the context relevant to the question at hand, just say "Hmm, I'm not sure." Don't try to make up an answer.
@@ -24,7 +22,7 @@ st.session_state.system_prompt = (
     You should use bullet points in your answer for readability
     Put citations where they apply rather than putting them all at the end.
 
-    Anything between the following `context`  html blocks is retrieved from a knowledge bank, not part of the conversation with the user.
+    Anything between the following `context`  html blocks is search result retrieved from a knowledge bank,  not part of the conversation with the user.
     """
 )
 # チャット履歴の初期化
@@ -64,12 +62,12 @@ with st.sidebar:
             index=0
         )
         # Parameterの調整
-        max_tokens = st.slider("max_tokens", 1024, 8192, 2048, 1)
+        max_tokens = st.slider("max_tokens", 1024, 8192, 8192, 1)
         temperature = st.slider("temperature", 0.0, 1.0, 0.0, 0.1)
         top_p = st.slider("top_p", 0.0, 1.0, 0.0, 0.1)
     else:
         llm_model = "llama3-8b-8192"
-        max_tokens = 2048
+        max_tokens = 8192
         temperature = 0.0
         top_p = 0.0
 
@@ -113,36 +111,45 @@ else:
             with st.chat_message(message["role"]):
                 st.markdown(message["content"])
 
+
 def similarity_search(query_text):
     api_base_url = "http://localhost:5000"
     collection_name = st.session_state.collection_name
     similarity_url = f"{api_base_url}/collections/{collection_name}/similarity"
     response = requests.post(similarity_url, json={"query": query_text})
+    closest_text = ""
     if response.status_code == 200:
         result = response.json()
         # closest_point_id = result["closest_point_id"]
         # st.write(f"Closest point ID: {closest_point_id}")
         st.write(f"Distance: {result['distance']}")
-        st.session_state.closest_text = result["closest_text"]
+        closest_text = result["closest_text"]
         # result_item = st.session_state.extract_items[closest_point_id]
         # st.write(f"Page: {result_item['pageNumber']} at {result_item['title']}")
-        st.write(f"Text: { st.session_state.closest_text}")
+        st.write(f"Text: { closest_text }")
     else:
         st.error("Failed to perform similarity search")
+    return closest_text
+
 
 if question := st.chat_input("Ask something", disabled=not groq_api_key):
-    similarity_search(question)
 
     # promptの作成
     user_prompt = ""
     if st.session_state.groq_chat_history == []:
         # 最初のチャットの場合：
+        # ユーザーの質問を表示
+        with st.chat_message("user"):
+            st.markdown(question)
+
+        # 類似検索を実行
+        closest_text = similarity_search(question)
         # SYSTEM_PROMPTをメッセージに連結
         if st.session_state.use_system_prompt:
             systemp_prompt = st.session_state.system_prompt + \
                 f"""
                 <context>
-                {st.session_state.closest_text}
+                {closest_text}
                 </context>
                 """
             system_prompt_item = [
