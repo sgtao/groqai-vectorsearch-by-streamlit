@@ -29,6 +29,26 @@ st.session_state.system_prompt = (
 if "groq_chat_history" not in st.session_state:
     st.session_state.groq_chat_history = []
 
+# APIエンドポイント
+api_base_url = "http://localhost:5000"
+
+def check_exist_embedding_server():
+    echo_path = api_base_url + "/echo"
+    try:
+        response = requests.get(echo_path)
+        if response.status_code == 200:
+            print("Exist Embedding Server")
+            # st.success("Exist Embedding Server")
+            return True
+        else:
+            print("No Embedding Server")
+            st.error("No Embedding Server")
+            return False
+    except Exception as e:
+        print(f"Failed to access server: {e}")  # デバッグ用プリント文
+        return False
+
+
 
 with st.sidebar:
     groq_api_key = st.text_input(
@@ -113,7 +133,7 @@ else:
 
 
 def similarity_search(query_text):
-    api_base_url = "http://localhost:5000"
+    # api_base_url = "http://localhost:5000"
     collection_name = st.session_state.collection_name
     similarity_url = f"{api_base_url}/collections/{collection_name}/similarity"
     response = requests.post(similarity_url, json={"query": query_text})
@@ -132,89 +152,95 @@ def similarity_search(query_text):
     return closest_text
 
 
-if question := st.chat_input("Ask something", disabled=not groq_api_key):
+# PDFファイルのアップロード
+has_embedding_server = check_exist_embedding_server()
+if not has_embedding_server:
+    st.error("This page needs embedding-server")
+else:
+    if question := st.chat_input("Ask something", disabled=not groq_api_key):
 
-    # promptの作成
-    user_prompt = ""
-    if st.session_state.groq_chat_history == []:
-        # 最初のチャットの場合：
-        # ユーザーの質問を表示
-        with st.chat_message("user"):
-            st.markdown(question)
+        # promptの作成
+        user_prompt = ""
+        if st.session_state.groq_chat_history == []:
+            # 最初のチャットの場合：
+            # ユーザーの質問を表示
+            with st.chat_message("user"):
+                st.markdown(question)
 
-        # 類似検索を実行
-        closest_text = similarity_search(question)
-        # SYSTEM_PROMPTをメッセージに連結
-        if st.session_state.use_system_prompt:
-            systemp_prompt = st.session_state.system_prompt + \
-                f"""
-                <context>
-                {closest_text}
-                </context>
-                """
-            system_prompt_item = [
-                {
-                    "role": "system",
-                    "content": systemp_prompt,
-                    "name": "userSupplement",
-                }
-            ]
-            st.session_state.groq_chat_history = system_prompt_item
+            # 類似検索を実行
+            closest_text = similarity_search(question)
+            # SYSTEM_PROMPTをメッセージに連結
+            if st.session_state.use_system_prompt:
+                systemp_prompt = st.session_state.system_prompt + \
+                    f"""
+                    <context>
+                    {closest_text}
+                    </context>
+                    """
+                system_prompt_item = [
+                    {
+                        "role": "system",
+                        "content": systemp_prompt,
+                        "name": "userSupplement",
+                    }
+                ]
+                st.session_state.groq_chat_history = system_prompt_item
 
-        # 最初のチャットで添付ファイルがある場合、upload_fileをuser_promptに添付
-        # print(type(uploaded_file)) # At no attachment, <class 'NoneType'>
-        if uploaded_file is not None:
-            article = uploaded_file.read().decode()
-            # print(f"attachmented article:{article}")
-            user_prompt = f"""Human: Here's an article(添付ファイル):\n\n<article>
-            {article}\n\n</article>\n\n{question}\n\nAssistant:"""
+            # 最初のチャットで添付ファイルがある場合、upload_fileをuser_promptに添付
+            # print(type(uploaded_file)) # At no attachment, <class 'NoneType'>
+            if uploaded_file is not None:
+                article = uploaded_file.read().decode()
+                # print(f"attachmented article:{article}")
+                user_prompt = f"""Human: Here's an article(添付ファイル):\n\n<article>
+                {article}\n\n</article>\n\n{question}\n\nAssistant:"""
+            else:
+                user_prompt = question
+
         else:
+            # 継続チャットの場合：
             user_prompt = question
 
-    else:
-        # 継続チャットの場合：
-        user_prompt = question
+        # completionのメッセージを履歴に追加
+        st.session_state.groq_chat_history.append({"role": "user", "content": user_prompt})
 
-    # completionのメッセージを履歴に追加
-    st.session_state.groq_chat_history.append({"role": "user", "content": user_prompt})
+        # ユーザーのメッセージを表示
+        with st.chat_message("user"):
+            st.markdown(user_prompt)
 
-    # ユーザーのメッセージを表示
-    with st.chat_message("user"):
-        st.markdown(user_prompt)
+        # completionの作成
+        if groq_api_key:
+            client = Groq(
+                api_key=groq_api_key,
+            )
+            chat_completion = client.chat.completions.create(
+                messages=st.session_state.groq_chat_history,
+                model=llm_model,
+                max_tokens=max_tokens,
+                temperature=temperature,
+                top_p=top_p
+            )
+            # print(chat_completion.choices[0].message.content)
+            completion = chat_completion.choices[0].message.content
+        else:
+            completion = user_prompt
 
-    # completionの作成
-    if groq_api_key:
-        client = Groq(
-            api_key=groq_api_key,
+        # prompt, completionのメッセージを履歴に追加
+        st.session_state.groq_chat_history.append(
+            {"role": "assistant", "content": completion}
         )
-        chat_completion = client.chat.completions.create(
-            messages=st.session_state.groq_chat_history,
-            model=llm_model,
-            max_tokens=max_tokens,
-            temperature=temperature,
-            top_p=top_p
+
+        # コンプリーションメッセージを表示
+        with st.chat_message("assistant"):
+            st.markdown(completion)
+
+        # 最後のメッセージまでスクロール
+        st.markdown(
+            """
+            <script>
+                const chatContainer = window.parent.document.querySelector(".chat-container");
+                chatContainer.scrollTop = chatContainer.scrollHeight;
+            </script>
+            """,
+            unsafe_allow_html=True,
         )
-        # print(chat_completion.choices[0].message.content)
-        completion = chat_completion.choices[0].message.content
-    else:
-        completion = user_prompt
 
-    # prompt, completionのメッセージを履歴に追加
-    st.session_state.groq_chat_history.append(
-        {"role": "assistant", "content": completion}
-    )
-
-    # コンプリーションメッセージを表示
-    with st.chat_message("assistant"):
-        st.markdown(completion)
-
-    # 最後のメッセージまでスクロール
-    st.markdown(
-        """
-        <script>
-            const chatContainer = window.parent.document.querySelector(".chat-container");
-            chatContainer.scrollTop = chatContainer.scrollHeight;
-        </script>
-        """,
-        unsafe_allow_html=True,
-    )
