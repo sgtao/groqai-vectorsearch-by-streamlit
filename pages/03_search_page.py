@@ -9,6 +9,9 @@ st.set_page_config(page_title="Search Page", page_icon="🔍️")
 
 # APIエンドポイント
 api_base_url = "http://localhost:5000"
+# 近傍結果の指定数
+number_nearest = 1
+
 
 def check_exist_embedding_server():
     echo_path = api_base_url + "/echo"
@@ -26,10 +29,11 @@ def check_exist_embedding_server():
         print(f"Failed to access server: {e}")  # デバッグ用プリント文
         return False
 
+
 def get_collections():
     collection_list = []
     get_collectiony_url = f"{api_base_url}/collections"
-    response = requests.get(get_collectiony_url,{})
+    response = requests.get(get_collectiony_url, {})
     if response.status_code == 200:
         result = response.json()
         collection_list = result["collections"]
@@ -38,23 +42,34 @@ def get_collections():
     return collection_list
 
 
-
-def similarity_search(query_text):
+def similarity_search(query_text, number_nearest=1):
     collection_name = st.session_state.collection_name
     similarity_url = f"{api_base_url}/collections/{collection_name}/similarity"
-    response = requests.post(similarity_url, json={"query": query_text})
-    closest_text = ""
+    response = requests.post(
+        similarity_url, json={"query": query_text, "k": number_nearest}
+    )
     if response.status_code == 200:
         result = response.json()
-        st.write(f"Distance: {result['distance']}")
-        closest_text = result["closest_text"]
-        st.markdown(f"Text: { closest_text }")
+        similar_items = result["similar_items"]
+        closest_distance = similar_items[0]["distance"]
+        for item in similar_items:
+            item_distance = item["distance"]
+            rounded_distance = round(item_distance, 3)
+            delta = round(item_distance - closest_distance, 3)
+            st.metric(
+                label="Distance",
+                value=rounded_distance,
+                delta=delta,
+            )
+            st.markdown(f"Text: {item['text']}")
     else:
         st.error("Failed to perform similarity search")
-    return closest_text
 
 
 # Streamlit のページ生成
+with st.sidebar:
+    number_nearest = st.slider("number of nearest neighbors", 1, 10, 1, 1)
+
 st.title("🔍️Check Vector Indexies.")
 
 # Embeddingサーバーの存在確認
@@ -77,4 +92,4 @@ else:
 
     # 検索ボタンが押されたときの処理
     if st.button("Search"):
-        similarity_search(query_text)
+        similarity_search(query_text, number_nearest)
