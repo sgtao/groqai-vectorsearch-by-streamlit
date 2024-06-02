@@ -32,6 +32,7 @@ if "groq_chat_history" not in st.session_state:
 # APIエンドポイント
 api_base_url = "http://localhost:5000"
 
+# 初回のみサーバーの存在を確認
 def check_exist_embedding_server():
     echo_path = api_base_url + "/echo"
     try:
@@ -48,6 +49,37 @@ def check_exist_embedding_server():
         print(f"Failed to access server: {e}")  # デバッグ用プリント文
         return False
 
+if "has_embedding_server" not in st.session_state:
+    st.session_state.has_embedding_server = check_exist_embedding_server()
+
+
+def get_collections():
+    collection_list = []
+    get_collectiony_url = f"{api_base_url}/collections"
+    response = requests.get(get_collectiony_url, {})
+    if response.status_code == 200:
+        result = response.json()
+        collection_list = result["collections"]
+    else:
+        st.error("Failed to get collections")
+    return collection_list
+
+
+def similarity_search(query_text, number_nearest=1):
+    collection_name = st.session_state.collection_name
+    similarity_url = f"{api_base_url}/collections/{collection_name}/similarity"
+    response = requests.post(
+        similarity_url, json={"query": query_text, "k": number_nearest}
+    )
+    closest_text = ""
+    if response.status_code == 200:
+        result = response.json()
+        similar_items = result["similar_items"]
+        # closest_distance = similar_items[0]["distance"]
+        closest_text = similar_items[0]["text"]
+    else:
+        st.error("Failed to perform similarity search")
+    return closest_text
 
 
 with st.sidebar:
@@ -116,6 +148,15 @@ st.write("This page hosts a chatbot interface.")
 if not groq_api_key:
     st.info("Please add your API key to continue.")
 else:
+    if not st.session_state.has_embedding_server:
+        st.error("This page needs embedding-server")
+    else:
+        # コレクションリストの取得
+        collections = get_collections()
+
+        # セレクトボックスでコレクションを選択
+        st.session_state.collection_name = st.selectbox("Select a collection", collections)
+
     # ファイルアップロード
     uploaded_file = st.file_uploader(
         "Before 1st question, You can upload an article",
@@ -132,29 +173,8 @@ else:
                 st.markdown(message["content"])
 
 
-def similarity_search(query_text):
-    # api_base_url = "http://localhost:5000"
-    collection_name = st.session_state.collection_name
-    similarity_url = f"{api_base_url}/collections/{collection_name}/similarity"
-    response = requests.post(similarity_url, json={"query": query_text})
-    closest_text = ""
-    if response.status_code == 200:
-        result = response.json()
-        # closest_point_id = result["closest_point_id"]
-        # st.write(f"Closest point ID: {closest_point_id}")
-        st.write(f"Distance: {result['distance']}")
-        closest_text = result["closest_text"]
-        # result_item = st.session_state.extract_items[closest_point_id]
-        # st.write(f"Page: {result_item['pageNumber']} at {result_item['title']}")
-        st.write(f"Text: { closest_text }")
-    else:
-        st.error("Failed to perform similarity search")
-    return closest_text
-
-
 # PDFファイルのアップロード
-has_embedding_server = check_exist_embedding_server()
-if not has_embedding_server:
+if not st.session_state.has_embedding_server:
     st.error("This page needs embedding-server")
 else:
     if question := st.chat_input("Ask something", disabled=not groq_api_key):
@@ -164,8 +184,8 @@ else:
         if st.session_state.groq_chat_history == []:
             # 最初のチャットの場合：
             # ユーザーの質問を表示
-            with st.chat_message("user"):
-                st.markdown(question)
+            # with st.chat_message("user"):
+            #     st.markdown(question)
 
             # 類似検索を実行
             closest_text = similarity_search(question)
