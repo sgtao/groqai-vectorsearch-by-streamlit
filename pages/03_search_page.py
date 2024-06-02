@@ -1,8 +1,6 @@
 # search_page.py
 import streamlit as st
 import requests
-import numpy as np
-import pandas as pd
 
 # Streamlitページのタイトル表示情報
 st.set_page_config(page_title="Search Page", page_icon="🔍️")
