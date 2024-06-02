@@ -4,7 +4,14 @@ import json
 import streamlit as st
 from groq import Groq
 
+# ページの設定
 st.set_page_config(page_title="Groq API Chatbot", page_icon="💬")
+
+if "groq_api_key" in st.session_state:
+    groq_api_key = st.session_state.groq_api_key
+else:
+    groq_api_key = ""
+
 st.session_state.system_prompt = (
     "You are a helpful assistant. And response in only Japanese."
 )
@@ -12,11 +19,16 @@ st.session_state.system_prompt = (
 if "groq_chat_history" not in st.session_state:
     st.session_state.groq_chat_history = []
 
-
 with st.sidebar:
-    groq_api_key = st.text_input(
-        "Groq API Key", key="api_key", type="password", placeholder="gsk_..."
+    # API-KEYの設定
+    st.session_state.groq_api_key = st.text_input(
+        "Groq API Key",
+        key="api_key",
+        type="password",
+        placeholder="gsk_...",
+        value=groq_api_key,
     )
+    groq_api_key = st.session_state.groq_api_key
     "[Get an Groq API key](https://console.groq.com/keys)"
     "[View the source code](https://github.com/sgtao/groqai-vectorsearch-by-streamlit/blob/main/pages/02_chatbot_page.py)"
 

@@ -5,7 +5,14 @@ import streamlit as st
 from groq import Groq
 import requests
 
+# ページの設定
 st.set_page_config(page_title="Groq API RAG Chatbot", page_icon="💬")
+
+if "groq_api_key" in st.session_state:
+    groq_api_key = st.session_state.groq_api_key
+else:
+    groq_api_key = ""
+
 st.session_state.system_prompt = (
     """You are a helpful assistant. And response in only Japanese.
     Assistant is designed to be able to assist with a wide range of tasks, from answering simple questions to providing in-depth explanations and discussions on a wide range of topics. As a language model, Assistant is able to generate human-like text based on the input it receives, allowing it to engage in natural-sounding conversations and provide responses that are coherent and relevant to the topic at hand.
@@ -83,9 +90,15 @@ def similarity_search(query_text, number_nearest=1):
 
 
 with st.sidebar:
-    groq_api_key = st.text_input(
-        "Groq API Key", key="api_key", type="password", placeholder="gsk_..."
+    # API-KEYの設定
+    st.session_state.groq_api_key = st.text_input(
+        "Groq API Key",
+        key="api_key",
+        type="password",
+        placeholder="gsk_...",
+        value=groq_api_key,
     )
+    groq_api_key = st.session_state.groq_api_key
     "[Get an Groq API key](https://console.groq.com/keys)"
     "[View the source code](https://github.com/sgtao/groqai-vectorsearch-by-streamlit/blob/main/pages/02_chatbot_page.py)"
 
