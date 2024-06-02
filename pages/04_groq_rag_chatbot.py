@@ -100,7 +100,7 @@ with st.sidebar:
     )
     groq_api_key = st.session_state.groq_api_key
     "[Get an Groq API key](https://console.groq.com/keys)"
-    "[View the source code](https://github.com/sgtao/groqai-vectorsearch-by-streamlit/blob/main/pages/02_chatbot_page.py)"
+    "[View the source code](https://github.com/sgtao/groqai-vectorsearch-by-streamlit/blob/main/pages/)"
 
     # SYSTEM_PROMPTの編集
     if st.checkbox(
