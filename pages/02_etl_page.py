@@ -80,12 +80,8 @@ def extract_process(pdf_file):
         return True
 
 
-def transform_process():
+def transform_process(collection_name):
     # embedding_url = api_base_url + "/encoding"
-
-    now = datetime.now()
-    collection_name = now.strftime("%y%m%d-%H%M%S")  # %yで2桁の年、%Hで24h表記
-    st.session_state.collection_name = collection_name
 
     # ベクトル値の取得
     items_embeddings = torch.tensor([])
@@ -151,7 +147,12 @@ else:
                     st.warning("Extract Process is failed.")
                     st.stop()
 
-                if transform_process() == False:
+                # define collection_name
+                now = datetime.now()
+                collection_name = now.strftime("%y%m%d-%H%M%S")  # %yで2桁の年、%Hで24h表記
+                st.session_state.collection_name = collection_name
+
+                if transform_process(collection_name) == False:
                     st.warning("Transform Process is failed.")
                     st.stop()
 
@@ -159,5 +160,5 @@ else:
                 #     st.warning("Save Process is failed.")
                 #     st.stop()
                 st.session_state.etl_success = True
-                st.success("ETL process finished!")
+                st.success(f"ETL process success! - collection : {collection_name} -")
 
