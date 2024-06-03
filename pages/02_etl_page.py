@@ -3,11 +3,7 @@ import os
 from datetime import datetime
 import streamlit as st
 import PyPDF2
-from groq import Groq
 import requests
-import faiss
-import numpy as np
-import pandas as pd
 import torch
 import tempfile
 
@@ -92,7 +88,7 @@ def transform_process(collection_name):
         # st.write(sentence)
         texts.append(sentence)
 
-    # FAISSインデックスの作成
+    # collections（FAISSインデックス）の作成
     create_index_url = api_base_url + "/collections/" + st.session_state.collection_name
     print(f"put URL is {create_index_url}")
     if len(texts) > 0:
