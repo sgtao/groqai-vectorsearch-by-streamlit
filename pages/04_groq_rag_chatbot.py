@@ -4,6 +4,7 @@ import json
 import streamlit as st
 from groq import Groq
 import requests
+from datetime import datetime
 
 # ページの設定
 st.set_page_config(page_title="Groq API RAG Chatbot", page_icon="💬")
@@ -145,10 +146,13 @@ with st.sidebar:
         chat_history_json = json.dumps(
             st.session_state.groq_chat_history, ensure_ascii=False, indent=4
         )
+        # define collection_name
+        now = datetime.now()
+        saved_file_name = now.strftime("%y%m%d_%H%M%S_chat_history.json")  # %yで2桁の年、%Hで24h表記
         st.download_button(
             label="Download chat_history.json",
             data=chat_history_json,
-            file_name="chat_history.json",
+            file_name=saved_file_name,
             mime="application/json",
         )
 
