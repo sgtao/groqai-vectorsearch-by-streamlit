@@ -6,6 +6,8 @@ import PyPDF2
 import requests
 import torch
 import tempfile
+from langchain_text_splitters import RecursiveCharacterTextSplitter
+import tiktoken
 
 # Streamlitページのタイトル表示情報
 st.set_page_config(page_title="ETL Page", page_icon="🔄")
@@ -25,15 +27,15 @@ def check_exist_embedding_server():
         response = requests.get(echo_path)
         if response.status_code == 200:
             print("Exist Embedding Server")
-            # st.success("Exist Embedding Server")
             return True
         else:
             print("No Embedding Server")
             st.error("No Embedding Server")
             return False
     except Exception as e:
-        print(f"Failed to access server: {e}")  # デバッグ用プリント文
+        print(f"Failed to access server: {e}")
         return False
+
 
 # ETL処理の関数
 def extract_process(pdf_file):
@@ -42,6 +44,14 @@ def extract_process(pdf_file):
     os.makedirs(temporal_dir, exist_ok=True)
     with tempfile.TemporaryDirectory(dir=temporal_dir) as temp_dir:
         temp_pdf_path = os.path.join(temp_dir, pdf_file.name)
+
+        # トークナイザーの設定
+        # TokenTextSplitterの設定
+        text_splitter = RecursiveCharacterTextSplitter.from_tiktoken_encoder(
+            model_name="gpt-4",
+            chunk_size=100,
+            chunk_overlap=0,
+        )
 
         # PDFファイルの保存
         with open(temp_pdf_path, "wb") as f:
@@ -59,19 +69,29 @@ def extract_process(pdf_file):
             for page_num in range(num_pages):
                 page = pdf_reader.pages[page_num]
                 text = page.extract_text()
-                # ページの情報を辞書形式で作成
-                page_item = {
-                    "title": file_title,
-                    "pageNumber": page_num + 1,
-                    "text": text,
-                }
-                # extract_itemsリストにページの情報を追加
-                extract_items.append(page_item)
-                st.session_state.extract_items.append(page_item)
 
-                st.write(f"Page {page_num+1}: {text}")
+                # テキストをトークン単位で分割
+                chunks = text_splitter.split_text(text)
 
-        # st.session_state.extract_items = extract_items
+                # 各チャンクをページ情報として保存
+                for chunk in chunks:
+                    page_item = {
+                        "title": file_title,
+                        "pageNumber": page_num + 1,
+                        "text": chunk,
+                    }
+                    extract_items.append(page_item)
+
+                # st.write(f"Page {page_num+1}: {text}")
+
+            # show chunks
+            for item in extract_items:
+                page_number = item["pageNumber"]
+                text = item["text"]
+                st.markdown(f"Page {page_number}: {text}")
+
+            # st.session_state.extract_items = extract_items
+
         st.success("Extract process completed. Continue to Transform Process.")
         return True
 
@@ -127,7 +147,6 @@ else:
     faiss_index_db = None
 
     st.session_state.etl_success = False
-
 
     # ETL処理の実行
     if uploaded_file is None:
