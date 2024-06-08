@@ -7,8 +7,20 @@ st.set_page_config(page_title="Search Page", page_icon="🔍️")
 
 # APIエンドポイント
 api_base_url = "http://localhost:5000"
+
+if "collection_name" in st.session_state:
+    selected_collection = st.session_state.collection_name
+
+if "search_query" in st.session_state:
+    search_query = st.session_state.search_query
+else:
+    search_query = ""
+
 # 近傍結果の指定数
-number_nearest = 1
+if "number_nearest" in st.session_state:
+    number_nearest = st.session_state.number_nearest
+else:
+    number_nearest = 1
 
 
 def check_exist_embedding_server():
@@ -66,7 +78,13 @@ def similarity_search(query_text, number_nearest=1):
 
 # Streamlit のページ生成
 with st.sidebar:
-    number_nearest = st.slider("number of nearest neighbors", 1, 10, 1, 1)
+    st.session_state.number_nearest = st.slider(
+        label="number of nearest neighbors",
+        min_value=1,
+        max_value=10,
+        step=1,
+        value=number_nearest,
+    )
 
 st.title("🔍️Check Vector Indexies.")
 
@@ -79,15 +97,22 @@ else:
     collections = get_collections()
 
     # セレクトボックスでコレクションを選択
-    selected_collection = st.selectbox("Select a collection", collections)
+    st.session_state.collection_name = st.selectbox(
+        "Select a collection",
+        collections,
+    )
 
     # 選択したコレクション名をセッションステートに保存
-    if selected_collection:
-        st.session_state.collection_name = selected_collection
+    # if selected_collection:
+    #     st.session_state.collection_name = selected_collection
 
     # クエリテキストの入力
-    query_text = st.text_input("Enter text to search for similar collections")
+    st.session_state.search_query = st.text_input(
+        "Enter text to search for similar collections", value=search_query
+    )
 
     # 検索ボタンが押されたときの処理
     if st.button("Search"):
-        similarity_search(query_text, number_nearest)
+        similarity_search(
+            st.session_state.search_query, st.session_state.number_nearest
+        )
