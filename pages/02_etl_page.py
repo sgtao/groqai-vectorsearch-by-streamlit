@@ -74,6 +74,7 @@ def extract_process(pdf_file):
         with open(temp_pdf_path, "rb") as f:
             pdf_reader = PyPDF2.PdfReader(f)
             num_pages = len(pdf_reader.pages)
+            st.header(f"File: {file_title}")
             st.write(f"Number of pages: {num_pages}")
 
             # 各ページのテキストを抽出
