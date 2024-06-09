@@ -18,6 +18,13 @@ if "collection_name" not in st.session_state:
     st.session_state.etl_success = False
     st.session_state.extract_items = []
 
+max_chunk_size = 512
+if "chunk_size" not in st.session_state:
+    st.session_state.chunk_size = max_chunk_size
+
+if "chunk_overlap" not in st.session_state:
+    st.session_state.chunk_overlap = 0
+
 # APIエンドポイント
 api_base_url = "http://localhost:5000"
 
@@ -47,10 +54,14 @@ def extract_process(pdf_file):
 
         # トークナイザーの設定
         # TokenTextSplitterの設定
+        chunk_size = st.session_state.chunk_size
+        chunk_overlap_percentage = st.session_state.chunk_overlap
+        chunk_overlap = int(chunk_size * (chunk_overlap_percentage / 100))
+        st.write(f"Extract Parameter: size={chunk_size}, overlap={chunk_overlap}")
         text_splitter = RecursiveCharacterTextSplitter.from_tiktoken_encoder(
             model_name="gpt-4",
-            chunk_size=100,
-            chunk_overlap=0,
+            chunk_size=chunk_size,
+            chunk_overlap=chunk_overlap,
         )
 
         # PDFファイルの保存
@@ -132,6 +143,27 @@ def transform_process(collection_name):
 
 
 # Streamlit のページ生成
+with st.sidebar:
+    # Extract Parameterの調整
+    if st.checkbox("change Chunk Parameters."):
+        # Parameterの調整
+        st.session_state.chunk_size = st.slider(
+            label="chunk_size(token)",
+            min_value=128,
+            max_value=max_chunk_size,
+            step=16,
+            value=st.session_state.chunk_size,
+        )
+        st.session_state.chunk_overlap = st.slider(
+            label="overlap(%) is not work at model",
+            min_value=0,
+            max_value=50,
+            step=5,
+            value=st.session_state.chunk_overlap,
+            disabled=True,
+        )
+
+
 st.title("🔄ETL Processing")
 st.write("This page is dedicated to ETL (Extract, Transform, Load) operations.")
 
